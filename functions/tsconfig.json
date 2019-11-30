@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "es6",
+      "esnext.asynciterable"
+    ],
+    "module": "commonjs",
+    "noImplicitReturns": true,
+    //    "noUnusedLocals": true, //doesn't exist
+    "outDir": "lib",
+    "sourceMap": true,
+    //    "strict": true, //doesn't exist before
+    "target": "es6"
+  },
+  "compileOnSave": true,
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules" //this is default already?
+  ]
+}
