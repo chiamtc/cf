@@ -30,7 +30,7 @@ describe('Cloud Functions', () => {
         test.cleanup();
     });
 
-    xdescribe('makeUpperCase', () => {
+    describe('makeUpperCase', () => {
         // Test Case: setting messages/{pushId}/original to 'input' should cause 'INPUT' to be written to
         // messages/{pushId}/uppercase
         it('should upper case input and write it to /uppercase', () => {
@@ -69,14 +69,14 @@ describe('Cloud Functions', () => {
     describe('createHumanSample', () => {
         let oldDatabase;
         const newSamplePayload = {sampleName: "Lung test", sampleOf: "1234"};
-        const humanSampleSetPayload = {sampleSetCount:2};
+        const humanSampleSetPayload = {sampleSetCount:1};
 
         let humanSampleSetStub = sinon.stub();
         let sampleOfStub = sinon.stub();
         let sampleSetCountStub = sinon.stub();
         before(async() => {
             oldDatabase = admin.database;
-            const snap = await test.database.makeDataSnapshot(2, 'human_sampleSet/1234/sampleSetCount');
+            // const snap = await test.database.makeDataSnapshot(2, 'human_sampleSet/1234/sampleSetCount');
         });
 
         after(() => {
@@ -113,11 +113,6 @@ describe('Cloud Functions', () => {
                 }
             };
 
-            const transactionFn = (currentState)=>{
-                console.log(currentState)
-                return humanSampleSetPayload.sampleSetCount;
-            }
-
             humanSampleSetStub.withArgs('human_sampleSet').returns({child:sampleOfStub});
             sampleOfStub.withArgs(newSamplePayload.sampleOf).returns({child:sampleSetCountStub});
             sampleSetCountStub.withArgs('sampleSetCount').returns({transaction:transactionStub});
@@ -132,7 +127,7 @@ describe('Cloud Functions', () => {
         });
     })
 
-    xdescribe('addMessage', () => {
+    describe('addMessage', () => {
         let oldDatabase;
         before(() => {
             // Save the old database method so it can be restored after the test.
