@@ -68,9 +68,15 @@ describe('Cloud Functions', () => {
 
     describe('createHumanSample', () => {
         let oldDatabase;
+        const newSamplePayload = {sampleName: "Lung test", sampleOf: "1234"};
+        const humanSampleSetPayload = {sampleSetCount:2};
 
-        before(() => {
+        let humanSampleSetStub = sinon.stub();
+        let sampleOfStub = sinon.stub();
+        let sampleSetCountStub = sinon.stub();
+        before(async() => {
             oldDatabase = admin.database;
+            const snap = await test.database.makeDataSnapshot(2, 'human_sampleSet/1234/sampleSetCount');
         });
 
         after(() => {
@@ -78,8 +84,7 @@ describe('Cloud Functions', () => {
         });
 
         it('should create a humanSample', () => {
-            const newSamplePayload = {sampleName: "Lung test", sampleOf: "1234"};
-          /*  const refParam = '/humanSample/newsmapleId';
+           /*  const refParam = '/humanSample/newsmapleId';
 
             const databaseStub = sinon.stub();
             const refStub = sinon.stub();
@@ -91,9 +96,9 @@ describe('Cloud Functions', () => {
             updateStub.withArgs(newSamplePayload).returns(true);
 */
 
-            const humanSampleSetStub = sinon.stub();
-            const sampleOfStub = sinon.stub();
-            const sampleSetCountStub = sinon.stub();
+            humanSampleSetStub = sinon.stub();
+            sampleOfStub = sinon.stub();
+            sampleSetCountStub = sinon.stub();
             const transactionStub = sinon.stub();
 
             const snap = {
@@ -109,14 +114,15 @@ describe('Cloud Functions', () => {
             };
 
             const transactionFn = (currentState)=>{
-                console.log('aaa')
-                return currentState++;
+                console.log(currentState)
+                return humanSampleSetPayload.sampleSetCount;
             }
 
             humanSampleSetStub.withArgs('human_sampleSet').returns({child:sampleOfStub});
             sampleOfStub.withArgs(newSamplePayload.sampleOf).returns({child:sampleSetCountStub});
             sampleSetCountStub.withArgs('sampleSetCount').returns({transaction:transactionStub});
-            transactionStub.callsFake(transactionFn);
+            transactionStub.yields(humanSampleSetPayload.sampleSetCount);
+            // transactionStub.withArgs(transactionFn).returns(true);
 
             const wrapped = test.wrap(myFunctions.createSample);
             // Since we've stubbed snap.ref.parent.child(childParam).set(setParam) to return true if it was

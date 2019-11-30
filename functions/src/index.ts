@@ -50,7 +50,7 @@ exports.createSample = functions.database.ref('/humanSample/{sampleId}').onCreat
     console.log("sampleOf",sampleOf)
     return snapshot.ref.root.child('human_sampleSet').child(sampleOf).child('sampleSetCount').transaction((currentSampleSetCount)=>{
     // return snapshot.ref.root.child('human_sampleSet').transaction((currentSampleSetCount)=>{
-        console.log('here?')
+        console.log('currentSampleSetCount: ',currentSampleSetCount)
         return (currentSampleSetCount || 0) +1;
     })
 });
