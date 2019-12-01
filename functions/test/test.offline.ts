@@ -68,13 +68,11 @@ describe('Cloud Functions', () => {
 
     describe('createHumanSample', () => {
         let oldDatabase;
-        const newSamplePayload = {sampleName: "Lung test", sampleOf: "1234"};
-        const humanSampleSetPayload = {sampleSetCount:1};
+        const newSamplePayload = {sampleName: "Lung test", sampleOf: "1234", sampleSetId: "5678"};
+        const humanSampleSetPayload = {numberSampleCount: 1};
 
-        let humanSampleSetStub = sinon.stub();
-        let sampleOfStub = sinon.stub();
-        let sampleSetCountStub = sinon.stub();
-        before(async() => {
+
+        before(async () => {
             oldDatabase = admin.database;
             // const snap = await test.database.makeDataSnapshot(2, 'human_sampleSet/1234/sampleSetCount');
         });
@@ -84,45 +82,53 @@ describe('Cloud Functions', () => {
         });
 
         it('should create a humanSample', () => {
-           /*  const refParam = '/humanSample/newsmapleId';
+            /*  const refParam = '/humanSample/newsmapleId';
 
-            const databaseStub = sinon.stub();
-            const refStub = sinon.stub();
-            const updateStub = sinon.stub();
+             const databaseStub = sinon.stub();
+             const refStub = sinon.stub();
+             const updateStub = sinon.stub();
 
-            Object.defineProperty(admin, 'database', {get: () => databaseStub});
-            databaseStub.returns({ref: refStub});
-            refStub.withArgs(refParam).returns({update: updateStub});
-            updateStub.withArgs(newSamplePayload).returns(true);
-*/
+             Object.defineProperty(admin, 'database', {get: () => databaseStub});
+             databaseStub.returns({ref: refStub});
+             refStub.withArgs(refParam).returns({update: updateStub});
+             updateStub.withArgs(newSamplePayload).returns(true);
+ */
 
-            humanSampleSetStub = sinon.stub();
-            sampleOfStub = sinon.stub();
-            sampleSetCountStub = sinon.stub();
+            const rootStub = sinon.stub();
+            const sampleSetStub = sinon.stub();
+            const sampleOfStub = sinon.stub();
+            const sampleSetIdStub = sinon.stub();
+            const sampleSetCountStub = sinon.stub();
             const transactionStub = sinon.stub();
 
+            let wrapped;
             const snap = {
                 val: () => newSamplePayload,
-                ref:{
-                   root:{
-                       child: humanSampleSetStub
-                   },
-                    parent:{
-                        child: humanSampleSetStub
-                    }
+                ref: {
+                    root: {
+                        child: pickChild()
+                    },
                 }
             };
 
-            humanSampleSetStub.withArgs('human_sampleSet').returns({child:sampleOfStub});
-            sampleOfStub.withArgs(newSamplePayload.sampleOf).returns({child:sampleSetCountStub});
-            sampleSetCountStub.withArgs('sampleSetCount').returns({transaction:transactionStub});
-            transactionStub.yields(humanSampleSetPayload.sampleSetCount);
-            // transactionStub.withArgs(transactionFn).returns(true);
+            function pickChild() {
+                rootStub.withArgs('patient_sampleSet').returns({child: sampleOfStub});
+                rootStub.withArgs('sampleSet').returns({child: sampleSetIdStub});
 
-            const wrapped = test.wrap(myFunctions.createSample);
+                sampleOfStub.withArgs(newSamplePayload.sampleOf).returns({child: sampleSetIdStub});
+
+                sampleSetIdStub.withArgs(newSamplePayload.sampleSetId).returns({child: sampleSetCountStub});
+                sampleSetCountStub.withArgs('numberSampleCount').returns({transaction: transactionStub});
+                transactionStub.yields(humanSampleSetPayload.numberSampleCount);
+
+                wrapped = test.wrap(myFunctions.createSample);
+                return rootStub
+            }
+
             // Since we've stubbed snap.ref.parent.child(childParam).set(setParam) to return true if it was
             // called with the parameters we expect, we assert that it indeed returned true.
             console.log('here', wrapped(snap));
+            // console.log('here', wrapped(snap2));
             // return assert.equal(wrapped(snap), true);
         });
     })

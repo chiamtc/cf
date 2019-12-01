@@ -45,12 +45,19 @@ exports.makeUppercase = functions.database.ref('/messages/{pushId}/original')
 // [END makeUppercase]
 // [END all]
 
-exports.createSample = functions.database.ref('/humanSample/{sampleId}').onCreate((snapshot, context)=>{
-    const {sampleOf} = snapshot.val();
-    console.log("sampleOf",sampleOf)
-    return snapshot.ref.root.child('human_sampleSet').child(sampleOf).child('sampleSetCount').transaction((currentSampleSetCount)=>{
-    // return snapshot.ref.root.child('human_sampleSet').transaction((currentSampleSetCount)=>{
-        console.log('currentSampleSetCount: ',currentSampleSetCount)
-        return (currentSampleSetCount || 0) +1;
-    })
+exports.createSample = functions.database.ref('/humanSample/{sampleId}').onCreate((snapshot, context) => {
+    const {sampleOf, sampleSetId} = snapshot.val();
+    console.log("sampleOf", sampleOf)
+    const p1 = snapshot.ref.root.child('patient_sampleSet').child(sampleOf).child(sampleSetId).child('numberSampleCount').transaction((currentSampleSetCount) => {
+        // return snapshot.ref.root.child('human_sampleSet').transaction((currentSampleSetCount)=>{
+        console.log('currentSampleSetCount in patient_sampleSet: ', currentSampleSetCount)
+        return (currentSampleSetCount || 0) + 1;
+    });
+    const p2 = snapshot.ref.root.child('sampleSet').child(sampleSetId).child('numberSampleCount').transaction((currentSampleSetCount) => {
+
+        // return snapshot.ref.root.child('human_sampleSet').transaction((currentSampleSetCount)=>{
+        console.log('currentSampleSetCount in sampleSet: ', currentSampleSetCount)
+        return (currentSampleSetCount || 0) + 1;
+    });
+    return Promise.all([p1, p2])
 });
