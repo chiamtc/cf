@@ -1,7 +1,7 @@
 // Chai is a commonly used library for creating unit test suites. It is easily extended with plugins.
 const chai = require('chai');
 const assert = chai.assert;
-
+const expect = chai.expect;
 // Sinon is a library used for mocking or verifying function calls in JavaScript.
 const sinon = require('sinon');
 // Require firebase-admin so we can stub out some of its methods.
@@ -68,34 +68,15 @@ describe('Cloud Functions', () => {
 
     describe('createHumanSample', () => {
         let oldDatabase;
-        const newSamplePayload = {sampleName: "Lung test", sampleOf: "1234", sampleSetId: "5678"};
+        const newSamplePayload = {sampleName: "Lorem ipsum", sampleOf: "1234", sampleSetId: "5678"};
         const humanSampleSetPayload = {numberSampleCount: 1};
 
+        before(async () => oldDatabase = admin.database);
 
-        before(async () => {
-            oldDatabase = admin.database;
-            // const snap = await test.database.makeDataSnapshot(2, 'human_sampleSet/1234/sampleSetCount');
-        });
-
-        after(() => {
-            admin.database = oldDatabase;
-        });
+        after(() => admin.database = oldDatabase);
 
         it('should create a humanSample', () => {
-            /*  const refParam = '/humanSample/newsmapleId';
-
-             const databaseStub = sinon.stub();
-             const refStub = sinon.stub();
-             const updateStub = sinon.stub();
-
-             Object.defineProperty(admin, 'database', {get: () => databaseStub});
-             databaseStub.returns({ref: refStub});
-             refStub.withArgs(refParam).returns({update: updateStub});
-             updateStub.withArgs(newSamplePayload).returns(true);
- */
-
             const rootStub = sinon.stub();
-            const sampleSetStub = sinon.stub();
             const sampleOfStub = sinon.stub();
             const sampleSetIdStub = sinon.stub();
             const sampleSetCountStub = sinon.stub();
@@ -106,29 +87,110 @@ describe('Cloud Functions', () => {
                 val: () => newSamplePayload,
                 ref: {
                     root: {
-                        child: pickChild()
-                    },
+                        child: rootStub
+                    }
                 }
             };
 
-            function pickChild() {
-                rootStub.withArgs('patient_sampleSet').returns({child: sampleOfStub});
-                rootStub.withArgs('sampleSet').returns({child: sampleSetIdStub});
+            //assertion on snapshot.val()
+            assert.equal(snap.val().sampleSetId, '5678');
 
-                sampleOfStub.withArgs(newSamplePayload.sampleOf).returns({child: sampleSetIdStub});
+            //stubbing rootPath to child -> "patient_sampleSet" and child-> "sampleSet"
+            //patient_sampleSet -> sampleOf -> sampleSetId -> numberSampleCount
+            //sampleSet -> sampleSetId -> numberSampleCount
+            rootStub.withArgs('patient_sampleSet').returns({child: sampleOfStub});
+            rootStub.withArgs('sampleSet').returns({child: sampleSetIdStub});
+            //rootStub.withArgs(sinon.match.any).returns('my-default-value')  https://github.com/sinonjs/sinon/issues/176#issuecomment-357638653
 
-                sampleSetIdStub.withArgs(newSamplePayload.sampleSetId).returns({child: sampleSetCountStub});
-                sampleSetCountStub.withArgs('numberSampleCount').returns({transaction: transactionStub});
-                transactionStub.yields(humanSampleSetPayload.numberSampleCount);
+            //patient_sampleSet -> sampleOf
+            sampleOfStub.withArgs(newSamplePayload.sampleOf).returns({child: sampleSetIdStub});
 
-                wrapped = test.wrap(myFunctions.createSample);
-                return rootStub
-            }
+            //sampleSetId -> numberSampleCount from here on
+            sampleSetIdStub.withArgs(newSamplePayload.sampleSetId).returns({child: sampleSetCountStub});
+            sampleSetCountStub.withArgs('numberSampleCount').returns({transaction: transactionStub});
+            transactionStub.yields(humanSampleSetPayload.numberSampleCount);
+
+            //wrap the function
+            wrapped = test.wrap(myFunctions.createSample);
 
             // Since we've stubbed snap.ref.parent.child(childParam).set(setParam) to return true if it was
             // called with the parameters we expect, we assert that it indeed returned true.
+
+            //finally actually put the stubs and values into the wrapped function
             console.log('here', wrapped(snap));
-            // console.log('here', wrapped(snap2));
+
+            //TODO assertion
+            // return assert.equal(wrapped(snap), true);
+        });
+    })
+
+
+    describe('updateHumanSample', () => {
+        let oldDatabase;
+        const newSamplePayload = {sampleName: "Lorem ipsum", sampleOf: "1234", sampleSetId: "5678", url:'newUrl'};
+        const oldSamplePayload = {sampleName: "Lorem ipsum", sampleOf: "1234", sampleSetId: "5678"};
+        const humanSampleSetPayload = {numberUploadedCount: 1};
+
+        before(async () => oldDatabase = admin.database);
+
+        after(() => admin.database = oldDatabase);
+
+        it('should update a humanSample', () => {
+            const rootStub = sinon.stub();
+            const sampleOfStub = sinon.stub();
+            const sampleSetIdStub = sinon.stub();
+            const sampleSetCountStub = sinon.stub();
+            const transactionStub = sinon.stub();
+
+            let wrapped;
+            const snap = {
+                after:{
+                    val: () => newSamplePayload,
+                    ref: {
+                        root: {
+                            child: rootStub
+                        }
+                    }
+                },
+                before:{
+                    val: () => oldSamplePayload,
+                    ref: {
+                        root: {
+                            child: rootStub
+                        }
+                    }
+                }
+            };
+
+            //assertion on snapshot.val()
+            expect(snap.before.val()).to.not.have.property('url');
+            expect(snap.after.val()).to.have.property('url');
+
+            //stubbing rootPath to child -> "patient_sampleSet" and child-> "sampleSet"
+            //patient_sampleSet -> sampleOf -> sampleSetId -> numberSampleCount
+            //sampleSet -> sampleSetId -> numberSampleCount
+            rootStub.withArgs('patient_sampleSet').returns({child: sampleOfStub});
+            rootStub.withArgs('sampleSet').returns({child: sampleSetIdStub});
+            //rootStub.withArgs(sinon.match.any).returns('my-default-value')  https://github.com/sinonjs/sinon/issues/176#issuecomment-357638653
+
+            //patient_sampleSet -> sampleOf
+            sampleOfStub.withArgs(newSamplePayload.sampleOf).returns({child: sampleSetIdStub});
+
+            //sampleSetId -> numberSampleCount from here on
+            sampleSetIdStub.withArgs(newSamplePayload.sampleSetId).returns({child: sampleSetCountStub});
+            sampleSetCountStub.withArgs('numberUploadedCount').returns({transaction: transactionStub});
+            transactionStub.yields(humanSampleSetPayload.numberUploadedCount);
+
+            //wrap the function
+            wrapped = test.wrap(myFunctions.updateSample);
+
+            // Since we've stubbed snap.ref.parent.child(childParam).set(setParam) to return true if it was
+            // called with the parameters we expect, we assert that it indeed returned true.
+
+            //finally actually put the stubs and values into the wrapped function
+            console.log('here', wrapped(snap));
+
+            //TODO assertion
             // return assert.equal(wrapped(snap), true);
         });
     })
@@ -157,7 +219,8 @@ describe('Cloud Functions', () => {
             // This mimics the behavior of a push to the database, which returns an object containing a
             // ref property representing the URL of the newly pushed item.
 
-            /*admin :{
+            /* tree view of from line 163 - 166
+            admin :{
                 database:{
                     ref (path:String) => {
                         push : (responseFromDatabase) {
@@ -192,4 +255,4 @@ describe('Cloud Functions', () => {
             // [END assertHTTP]
         });
     });
-})
+});

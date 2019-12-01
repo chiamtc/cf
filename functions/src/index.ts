@@ -1,5 +1,5 @@
 import * as functions from 'firebase-functions';
-
+import {propertyExist} from './utils';
 // // Start writing Firebase Functions
 // // https://firebase.google.com/docs/functions/typescript
 //
@@ -48,16 +48,39 @@ exports.makeUppercase = functions.database.ref('/messages/{pushId}/original')
 exports.createSample = functions.database.ref('/humanSample/{sampleId}').onCreate((snapshot, context) => {
     const {sampleOf, sampleSetId} = snapshot.val();
     console.log("sampleOf", sampleOf)
-    const p1 = snapshot.ref.root.child('patient_sampleSet').child(sampleOf).child(sampleSetId).child('numberSampleCount').transaction((currentSampleSetCount) => {
-        // return snapshot.ref.root.child('human_sampleSet').transaction((currentSampleSetCount)=>{
-        console.log('currentSampleSetCount in patient_sampleSet: ', currentSampleSetCount)
-        return (currentSampleSetCount || 0) + 1;
+    const p1 = snapshot.ref.root.child('patient_sampleSet').child(sampleOf).child(sampleSetId).child('numberSampleCount').transaction((currentSampleCount) => {
+        console.log('currentSampleSetCount in patient_sampleSet: ', currentSampleCount)
+        return (currentSampleCount || 0) + 1;
     });
-    const p2 = snapshot.ref.root.child('sampleSet').child(sampleSetId).child('numberSampleCount').transaction((currentSampleSetCount) => {
+    const p2 = snapshot.ref.root.child('sampleSet').child(sampleSetId).child('numberSampleCount').transaction((currentSampleCount) => {
 
         // return snapshot.ref.root.child('human_sampleSet').transaction((currentSampleSetCount)=>{
-        console.log('currentSampleSetCount in sampleSet: ', currentSampleSetCount)
-        return (currentSampleSetCount || 0) + 1;
+        console.log('currentSampleSetCount in sampleSet: ', currentSampleCount)
+        return (currentSampleCount || 0) + 1;
     });
     return Promise.all([p1, p2])
+});
+
+exports.updateSample = functions.database.ref('/humanSample/{sampleId}').onUpdate((snapshot, context) => {
+    const before = snapshot.before;
+    const after = snapshot.after;
+
+    //destructs after snapshot object
+    const {sampleOf, sampleSetId, url} = after.val();
+
+    if(!propertyExist(before.val() , 'url') && propertyExist(after.val(), 'url')){
+        //only use after.ref
+        const p1 = after.ref.root.child('patient_sampleSet').child(sampleOf).child(sampleSetId).child('numberUploadedCount').transaction((currentUploadedCount) => {
+            console.log('currentUploadedCount in patient_sampleSet: ', currentUploadedCount)
+            return (currentUploadedCount || 0) + 1;
+        });
+        const p2 = after.ref.root.child('sampleSet').child(sampleSetId).child('numberUploadedCount').transaction((currentUploadedCount) => {
+            console.log('currentUploadedCount in sampleSet: ', currentUploadedCount)
+            return (currentUploadedCount || 0) + 1;
+        });
+        return Promise.all([p1, p2])
+    }
+    return Promise.resolve("nothing changed");
+
+
 });
